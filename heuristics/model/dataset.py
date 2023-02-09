@@ -2,9 +2,48 @@ import os
 from typing import Dict, Optional
 
 import pandas as pd
+from avito_ds_swat_utils.storages.dwh import VerticaPandasConnection
+from avito_ds_swat_utils.utils.image_manager import ImageManager
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+
+from .settings import (
+    IMAGES_DIR,
+    LABELS_PATH,
+    MAX_IMG_SIZE_STR,
+)
+
+
+def get_pd_dataset(cache_path=LABELS_PATH):
+    if cache_path is None or not os.path.exists(cache_path):
+        with VerticaPandasConnection() as dwh:
+            df = dwh.sql_to_pd('select * from dsswat.datasets_course_room_type')
+
+        df = df.dropna(subset=['image_id_ext'])
+        df['image_id_ext'] = df['image_id_ext'].astype(int)
+        df.reset_index(inplace=True)
+        if cache_path is not None:
+            df.to_csv(cache_path, index=False)
+    else:
+        df = pd.read_csv(cache_path)
+
+    return df
+
+
+def load_images(image_ids, save_dir=IMAGES_DIR, img_size=MAX_IMG_SIZE_STR, image_save_shards=False):
+    image_manager = ImageManager()
+
+    image_manager.process_images(
+        image_id_list=image_ids,
+        schema='item',
+        size=img_size,
+        version=1,
+        private=True,
+        image_save_to_disk=True,
+        image_root_dir=save_dir,
+        image_save_shards=image_save_shards,
+    )
 
 
 class TorchDataset(Dataset):
@@ -20,6 +59,7 @@ class TorchDataset(Dataset):
         image_dir: str = None,
         transformer: Optional[transforms.transforms.Compose] = None,
         normalize_sample_weights: bool = True,
+        custom_transform : Optional[transforms.transforms.Compose] = None,
     ):
         super(TorchDataset, self).__init__()
         self.image_dir = image_dir
@@ -30,6 +70,7 @@ class TorchDataset(Dataset):
         # self.df = self.df[self.df['result'] != -1]
         self.transformer = transformer
         self.image_cache = {}
+        self.custom_transform = custom_transform
 
     def img_path_from_id(self, image_id):
         path = os.path.join(self.image_dir, f'{image_id}.{self.img_extension}')
@@ -66,6 +107,9 @@ class TorchDataset(Dataset):
                 img = self.transformer(img)
 
             self.image_cache[idx] = img
+
+        if self.custom_transform:
+            img = self.custom_transform(img)
 
         # item = {
         #     'img': img,
