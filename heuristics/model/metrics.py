@@ -23,10 +23,9 @@ class Metrics:
         )
         cm_disp = ConfusionMatrixDisplay(
             confusion_matrix=cm,
-            display_labels=[self.class_mapping[label] for label in labels_ordered],
+            display_labels=[self.class_mapping.get(label, 'None') for label in labels_ordered],
         )
         fig, ax = plt.subplots(figsize=(15, 15))
-        # cm_disp = self.filter_confusion_matrix(num_filter_values)
         cm_disp.plot(ax=ax, xticks_rotation='vertical')
 
     def get_accuracies_df(self, targets, predictions):
