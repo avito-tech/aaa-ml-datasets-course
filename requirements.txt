@@ -10,13 +10,9 @@ nltk==3.6.7
 torch==1.11.0
 torchvision==0.12.0
 protobuf~=3.20
+opencv-python==4.6.0.66
 
-pulemet==1.1.0
-avito-ds-swat-utils==0.3.5
 toloka-kit==0.1.24
-dsswat-infomodel==0.6.10
-dsswat_dwh==0.1.8
-dsswat_clients==0.12.0
 protobuf~=3.20
 tqdm==4.64.1
 ipykernel==6.21.0

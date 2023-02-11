@@ -1,4 +1,3 @@
-# from torch.optim.lr_scheduler import
 import logging
 import os
 from typing import (
@@ -41,7 +40,7 @@ class TrainerUtils:
                 tensorboard_dir = os.path.join(tensorboard_dir, experiment_tag)
             self.tensorboard = SummaryWriter(tensorboard_dir)
         self.run_in_notebook = run_in_notebook
-        self.best_accuracy: float = 0
+        self.best_score: float = 0
         self.best_epoch: int = -1
         self.accuracies: List[float] = []
         self.checkpoint_path: str = os.path.join(model_checkpoint_path, f'model_{experiment_tag}')
@@ -63,19 +62,24 @@ class TrainerUtils:
     def do_checkpoint(
         self,
         epoch: int,
-        accuracy: float,
+        score: float,
         model,
         accuracy_df: pd.DataFrame = None
     ):
-        self.accuracies.append(accuracy)
+        self.accuracies.append(score)
+        better_than_previous = score > self.best_score
 
-        if accuracy > self.best_accuracy:
-            self.best_accuracy = accuracy
+        if accuracy_df is not None:
+            f1_score = accuracy_df.loc[accuracy_df['index'] == 'macro avg']['f1-score'].values[0]
+            better_than_previous = f1_score > self.best_f1
+
+        if better_than_previous:
+            self.best_score = score
+
             self.best_epoch = epoch
-
             model_state = {
                 'epoch': epoch,
-                'accuracy': accuracy,
+                'score': score,
             }
             model.save_pretrained(self.checkpoint_path, model_state)
 
@@ -177,11 +181,18 @@ class TrainerUtils:
             predictions, _, targets, _ = self.predict(model, val_dataloader, verbose=verbose)
 
             accuracy_df = None
+            f1_score = None
             if metrics_scorer is not None:
                 accuracy_df = metrics_scorer.get_accuracies_df(targets, predictions)
+                f1_score = accuracy_df.loc[accuracy_df['index'] == 'macro avg'
+                                           ]['f1-score'].values[0]
+
             accuracy = accuracy_score(targets, predictions)
             logging.info(f'val accuracy after epoch {epoch}: {round(accuracy, 4)}')
-            self.do_checkpoint(epoch, accuracy, model, accuracy_df)
+            if f1_score:
+                logging.info(f'val f1_score after epoch {epoch}: {round(f1_score, 4)}')
+
+            self.do_checkpoint(epoch,  f1_score or accuracy, model)
 
     def predict(
         self, model, dataloader, num_iterations=-1, with_all_probas=False, verbose=True,

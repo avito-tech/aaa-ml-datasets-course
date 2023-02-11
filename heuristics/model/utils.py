@@ -76,7 +76,7 @@ def plot_imgs_with_labels(
     labels_2: Tuple[List[Any], str] = None,
     labels_3: Tuple[List[Any], str] = None,
 ):
-    plt.figure(figsize=(15, 15))
+    plt.figure(figsize=(20, 20))
 
     n_subplots = len(image_paths)
     n_lines = int((n_subplots + 2) // 3)
@@ -90,12 +90,12 @@ def plot_imgs_with_labels(
         if labels_2 is not None:
             if isinstance(labels_2[0][i], float):
                 labels_2[0][i] = round(labels_2[0][i], 4)
-            title += f' {labels_2[1]}: {labels_2[0][i]}'
+            title += f'\n{labels_2[1]}: {labels_2[0][i]}'
 
         if labels_3 is not None:
             if isinstance(labels_3[0][i], float):
                 labels_3[0][i] = round(labels_3[0][i], 4)
-            title += f' {labels_3[1]}: {labels_3[0][i]}'
+            title += f'\n{labels_3[1]}: {labels_3[0][i]}'
 
         plt.title(title)
         plt.imshow(img)
@@ -113,86 +113,7 @@ def plot_sample(test_df, value='детская', column='label_pred', size=10):
                           (sample_df['proba'], 'proba'))
 
 
-def get_num_samples_per_class(class_counts, sample_size):
-    class_counts_rest = class_counts.copy()
-
-    n_classes = len(class_counts)
-    sample_size_per_target = sample_size // n_classes
-
-    class_to_sample_size = {}
-    current_sample_size = sample_size_per_target
-    ready_targets = []
-
-    while True:
-        values = [target for target, count in class_counts_rest.items() if
-                  count <= current_sample_size]
-        # time.sleep(1)
-        if len(values) > 0:
-            ready_targets += values
-            for value in values:
-                class_to_sample_size[value] = class_counts_rest.pop(value)
-            if n_classes == len(ready_targets):
-                break
-            current_sample_size = (sample_size - sum(class_to_sample_size.values())) // (
-                    n_classes - len(ready_targets)
-            )
-        else:
-            for target in class_counts_rest.keys():
-                class_to_sample_size[target] = current_sample_size
-                class_counts_rest[target] -= current_sample_size
-
-            break
-
-    s = sum(class_to_sample_size.values())
-    for target, count in class_counts_rest.items():
-        if s >= sample_size:
-            break
-        if count > 0:
-            class_to_sample_size[target] += 1
-            s += 1
-
-    return class_to_sample_size
-
-
-def max_min_with_diversity(probas, sample_size):
-    class_counts = Counter(probas.argmax(axis=1))
-    sample_size_per_target = get_num_samples_per_class(class_counts, sample_size)
-
-    indexes = []
-
-    for target, sample_size in sample_size_per_target.items():
-        target_indexes = np.argwhere(probas.argmax(axis=1) == target)[:, 0]
-        max_probas = probas[target_indexes, :].max(axis=1)
-
-        max_indexes = np.argsort(max_probas)[:sample_size]
-
-        indexes += list(target_indexes[max_indexes])
-
-    return indexes, sample_size_per_target
-
-
-def margin_with_diversity(probas, sample_size):
-    class_counts = Counter(probas.argmax(axis=1))
-    sample_size_per_target = get_num_samples_per_class(class_counts, sample_size)
-
-    indexes = []
-
-    for target, sample_size in sample_size_per_target.items():
-        target_indexes = np.argwhere(probas.argmax(axis=1) == target)[:, 0]
-        probas_sorted = np.sort(probas[target_indexes, :], axis=1)
-        margin = probas_sorted[:, -1] - probas_sorted[:, -2]
-        #         if target == 8:
-        #             print(probas_sorted[:2])
-        #             print(probas_sorted[:,-1], probas_sorted[:,-2])
-
-        margin_indexes = np.argsort(margin)[:sample_size]
-
-        indexes += list(target_indexes[margin_indexes])
-
-    return indexes, sample_size_per_target
-
-
-def load_images(urls, save_dir):
+def _load_images(urls, save_dir):
     results = []
 
     def getter(url, dest):
@@ -206,9 +127,18 @@ def load_images(urls, save_dir):
         t = threading.Thread(target=getter, args=(url, os.path.join(save_dir, filename)))
         t.start()
         threads.append(t)
-    # wait for all threads to finish
-    # You can continue doing whatever you want and
-    # join the threads when you finally need the results.
-    # They will fatch your urls in the background without
-    # blocking your main application.
+
     map(lambda t: t.join(), threads)
+
+    image_paths = [os.path.join(save_dir, os.path.split(url)[-1]) for url in urls]
+
+    return image_paths
+
+
+def load_images(urls, save_dir, max_threads_num=50):
+    image_paths = []
+    for i in range(0, len(urls), max_threads_num):
+        new_image_paths = _load_images(urls[i:i+max_threads_num], save_dir)
+        image_paths.extend(new_image_paths)
+
+    return image_paths
