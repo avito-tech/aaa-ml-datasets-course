@@ -229,6 +229,7 @@ def predict_img_batch(
     model_path: str = '/app/data/models/model_resnet18',
     labels: Optional[List[int]] = None,
     with_all_probas: bool = False,
+    device='cuda:0',
 ):
     if (image_paths is None and image_dir is None) or (
         image_paths is not None and image_dir is not None
@@ -243,13 +244,13 @@ def predict_img_batch(
     if labels is not None:
         test_df[TorchDataset.label_column] = labels
 
-    dataset = TorchDataset(df=test_df, transformer=get_preprocessor())
+    dataset = TorchDataset(df=test_df, transformer=get_preprocessor(), with_cache=False)
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     room_clf, _ = RoomModel.from_pretrained(model_path)
 
-    trainer = TrainerUtils(device='cuda:0')
+    trainer = TrainerUtils(device=device)
     predictions_all, probas_all, targets_all, all_class_probas = trainer.predict(
         room_clf, dataloader, with_all_probas=with_all_probas
     )

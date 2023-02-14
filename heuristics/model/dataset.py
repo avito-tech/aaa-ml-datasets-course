@@ -20,6 +20,7 @@ class TorchDataset(Dataset):
         image_dir: str = None,
         transformer: Optional[transforms.transforms.Compose] = None,
         normalize_sample_weights: bool = True,
+        with_cache=True,
     ):
         super(TorchDataset, self).__init__()
         self.image_dir = image_dir
@@ -30,6 +31,7 @@ class TorchDataset(Dataset):
         # self.df = self.df[self.df['result'] != -1]
         self.transformer = transformer
         self.image_cache = {}
+        self.with_cache = with_cache
 
     def img_path_from_id(self, image_id):
         path = os.path.join(self.image_dir, f'{image_id}.{self.img_extension}')
@@ -64,8 +66,8 @@ class TorchDataset(Dataset):
             img = self.load_img(idx, item)
             if self.transformer is not None:
                 img = self.transformer(img)
-
-            self.image_cache[idx] = img
+            if self.with_cache:
+                self.image_cache[idx] = img
 
         # item = {
         #     'img': img,
