@@ -2,7 +2,7 @@ pandas==1.2.1
 matplotlib==3.3.3
 seaborn==0.11.2
 scipy==1.6.0
-numpy==1.22.2
+numpy==1.26.4
 scikit-learn==1.0.1
 transformers==4.12.5
 tensorboard==2.7.0
@@ -13,6 +13,10 @@ protobuf~=3.20
 opencv-python==4.6.0.66
 
 toloka-kit==0.1.24
-protobuf~=3.20
-tqdm==4.64.1
+tqdm==4.67.1
 ipykernel==6.21.0
+notebook==7.4.1
+ipywidgets==8.1.6
+
+together==1.4.6
+dotenv==0.9.9
