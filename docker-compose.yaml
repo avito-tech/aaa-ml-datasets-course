@@ -8,8 +8,8 @@ services:
       - .:/app
       - ./data:/data
     ports:
-      - "8888:8888"
-      - "6006:6006"
+      - "8881:8888"
+      - "6001:6006"
     environment:
       - PYTHONPATH=/app
     command: >
