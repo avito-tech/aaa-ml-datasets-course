@@ -19,3 +19,17 @@ docker compose restart
 ```bash
 docker compose exec bash
 ```
+
+## Публикация пакета
+
+```bash
+python3 -m pip install --upgrade twine
+python3 -m twine upload  dist/*
+```
+
+## Использование пакета
+
+```python
+pip install aaa-ml-datasets-course
+from heuristics.model.classifier import RoomModel
+```
